@@ -75,5 +75,5 @@ const screenY = -euler.pitch * SENSITIVITY_Y;
 
 ## Compatibility
 Runs on Chrome, Firefox, Safari, and Edge. Mobile-friendly responsive design.
-
+##
 Pure HTML/CSS/JavaScript - no frameworks or build tools required.
