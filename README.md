@@ -49,7 +49,7 @@ window.addEventListener('deviceorientation', (event) => {
     const screenPos = mapQuaternionToScreen(quaternion);
     updateCursorPosition(screenPos.x, screenPos.y);
 });
-
+```
 ## Customization
 
 Change colors and sizes with CSS variables:
@@ -60,16 +60,20 @@ Change colors and sizes with CSS variables:
     --phone-size: 80px;
     --screen-bounds: 200px;
 }
-Modify motion sensitivity:
-javascriptconst screenX = euler.yaw * SENSITIVITY_X;
+```
+
+## Modify motion sensitivity:
+
+``` javascriptconst screenX = euler.yaw * SENSITIVITY_X;
 const screenY = -euler.pitch * SENSITIVITY_Y;
-Common Issues
+```
+## Common Issues
 
-Cursor stuck: Quaternion values might need normalization
-No 3D effects: Browser may not support CSS 3D transforms
-Debug mode: Use console.log('Q:', mapper.quaternion) to check values
+**Cursor stuck:** Quaternion values might need normalization
+**No 3D effects:** Browser may not support CSS 3D transforms
+**Debug mode:** Use console.log('Q:', mapper.quaternion) to check values
 
-Compatibility
+## Compatibility
 Runs on Chrome, Firefox, Safari, and Edge. Mobile-friendly responsive design.
 
 Pure HTML/CSS/JavaScript - no frameworks or build tools required.
