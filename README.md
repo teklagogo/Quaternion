@@ -73,7 +73,5 @@ const screenY = -euler.pitch * SENSITIVITY_Y;
 **No 3D effects:** Browser may not support CSS 3D transforms
 **Debug mode:** Use console.log('Q:', mapper.quaternion) to check values
 
-## Compatibility
-Runs on Chrome, Firefox, Safari, and Edge. Mobile-friendly responsive design.
 ##
 Pure HTML/CSS/JavaScript - no frameworks or build tools required.
