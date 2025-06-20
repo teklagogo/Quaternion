@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quaternion 3D to 2D Motion Mapping</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #c3ddfd 100%);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .header p {
+            color: #6b7280;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (min-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .panel-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-left: 0.5rem;
+        }
+
+        .phone-container {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            perspective: 1000px;
+        }
+
+        .phone-3d {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80px;
+            height: 128px;
+            background: linear-gradient(145deg, #374151, #111827);
+            border-radius: 8px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transform-origin: center center;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+            transform: translate(-50%, -50%);
+        }
+
+        .phone-screen {
+            position: absolute;
+            inset: 8px;
+            background: #3b82f6;
+            border-radius: 4px;
+            opacity: 0.8;
+        }
+
+        .phone-speaker {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 4px;
+            background: #6b7280;
+            border-radius: 2px;
+        }
+
+        .phone-button {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 32px;
+            height: 32px;
+            border: 1px solid #6b7280;
+            border-radius: 50%;
+        }
+
+        .axis-labels {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .axis-x { color: #dc2626; }
+        .axis-y { color: #16a34a; }
+        .axis-z { color: #2563eb; }
+
+        .controls {
+            margin-top: 1.5rem;
+        }
+
+        .controls h3 {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 0.75rem;
+        }
+
+        .control-label {
+            width: 24px;
+            font-family: monospace;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .control-slider {
+            flex: 1;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .control-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #3b82f6;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .control-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #3b82f6;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+        }
+
+        .control-value {
+            width: 64px;
+            text-align: right;
+            font-family: monospace;
+            font-size: 0.875rem;
+            color: #374151;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .btn-reset {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #4b5563;
+        }
+
+        .btn-animate {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-animate:hover {
+            background: #2563eb;
+        }
+
+        .btn-animate.active {
+            background: #dc2626;
+        }
+
+        .btn-animate.active:hover {
+            background: #b91c1c;
+        }
+
+        .screen-container {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            background: #111827;
+            border: 2px solid #374151;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .screen-grid {
+            position: absolute;
+            inset: 0;
+            opacity: 0.3;
+            background-image: 
+                linear-gradient(rgba(34, 197, 94, 0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(34, 197, 94, 0.3) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .screen-center-lines {
+            position: absolute;
+            inset: 0;
+        }
+
+        .screen-center-lines::before,
+        .screen-center-lines::after {
+            content: "";
+            position: absolute;
+            background: #10b981;
+        }
+
+        .screen-center-lines::before {
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            transform: translateX(-50%);
+        }
+
+        .screen-center-lines::after {
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            transform: translateY(-50%);
+        }
+
+        .cursor {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #ef4444;
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+            transition: all 0.1s ease-out;
+            z-index: 10;
+            transform: translate(-50%, -50%);
+        }
+
+        .cursor::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: #f87171;
+            border-radius: 50%;
+            animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes ping {
+            75%, 100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+
+        .screen-coords {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            color: #10b981;
+            font-family: monospace;
+            font-size: 0.875rem;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .screen-bounds {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            color: #10b981;
+            font-size: 0.75rem;
+        }
+
+        .info-panel {
+            margin-top: 1.5rem;
+        }
+
+        .info-panel h3 {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.75rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+
+        .info-section h4 {
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .explanation {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .explanation h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.75rem;
+        }
+
+        .explanation p {
+            color: #6b7280;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .explanation strong {
+            color: #374151;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Quaternion 3D to 2D Motion Mapping</h1>
+            <p>
+                Simulate how a mobile phone's 3D rotation (represented by quaternions) maps to 2D cursor movement on screen.
+                Adjust the quaternion parameters to see how they affect the screen position.
+            </p>
+        </div>
+
+        <div class="main-grid">
+            <!-- 3D Phone Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <svg width="24" height="24" fill="none" stroke="#3b82f6" stroke-width="2">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                        <line x1="12" y1="18" x2="12.01" y2="18"/>
+                    </svg>
+                    <h2>3D Phone Rotation</h2>
+                </div>
+                
+                <div class="phone-container">
+                    <div id="phone3d" class="phone-3d">
+                        <div class="phone-screen"></div>
+                        <div class="phone-speaker"></div>
+                        <div class="phone-button"></div>
+                    </div>
+                    
+                    <div class="axis-labels">
+                        <div class="axis-x">X: Roll</div>
+                        <div class="axis-y">Y: Pitch</div>
+                        <div class="axis-z">Z: Yaw</div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <h3>Quaternion Parameters</h3>
+                    <div class="control-group">
+                        <label class="control-label">w:</label>
+                        <input type="range" id="qw" class="control-slider" min="-1" max="1" step="0.01" value="1">
+                        <span id="qw-value" class="control-value">1.00</span>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">x:</label>
+                        <input type="range" id="qx" class="control-slider" min="-1" max="1" step="0.01" value="0">
+                        <span id="qx-value" class="control-value">0.00</span>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">y:</label>
+                        <input type="range" id="qy" class="control-slider" min="-1" max="1" step="0.01" value="0">
+                        <span id="qy-value" class="control-value">0.00</span>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">z:</label>
+                        <input type="range" id="qz" class="control-slider" min="-1" max="1" step="0.01" value="0">
+                        <span id="qz-value" class="control-value">0.00</span>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button id="resetBtn" class="btn btn-reset">
+                            <span>↻</span> Reset
+                        </button>
+                        <button id="animateBtn" class="btn btn-animate">
+                            Animate
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2D Screen Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <svg width="24" height="24" fill="none" stroke="#16a34a" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    <h2>2D Screen Movement</h2>
+                </div>
+                
+                <div class="screen-container">
+                    <div class="screen-grid"></div>
+                    <div class="screen-center-lines"></div>
+                    <div id="cursor" class="cursor"></div>
+                    <div id="screenCoords" class="screen-coords">X: 0, Y: 0</div>
+                    <div class="screen-bounds">Screen bounds: ±200x, ±150y</div>
+                </div>
+
+                <div class="info-panel">
+                    <h3>Current Values</h3>
+                    <div class="info-grid">
+                        <div class="info-section">
+                            <h4>Normalized Quaternion:</h4>
+                            <div>w: <span id="norm-w">1.000</span></div>
+                            <div>x: <span id="norm-x">0.000</span></div>
+                            <div>y: <span id="norm-y">0.000</span></div>
+                            <div>z: <span id="norm-z">0.000</span></div>
+                        </div>
+                        <div class="info-section">
+                            <h4>Euler Angles (rad):</h4>
+                            <div>Roll: <span id="euler-roll">0.000</span></div>
+                            <div>Pitch: <span id="euler-pitch">0.000</span></div>
+                            <div>Yaw: <span id="euler-yaw">0.000</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h3>How It Works</h3>
+            <p><strong>Quaternions (w, x, y, z)</strong> represent 3D rotations with 4 parameters. They avoid gimbal lock and provide smooth interpolation.</p>
+            <p><strong>Conversion Process:</strong> Quaternion → Euler Angles → Screen Coordinates</p>
+            <p><strong>Mapping:</strong> Pitch (Y-rotation) controls vertical screen movement, Yaw (Z-rotation) controls horizontal movement.</p>
+            <p><strong>Phone Analogy:</strong> Tilt phone up/down (pitch) to move cursor up/down, rotate phone left/right (yaw) to move cursor left/right.</p>
+        </div>
+    </div>
+
+    <script>
+        class QuaternionMapper {
+            constructor() {
+                this.quaternion = { w: 1, x: 0, y: 0, z: 0 };
+                this.screenPos = { x: 0, y: 0 };
+                this.isAnimating = false;
+                this.animationId = null;
+                
+                this.initElements();
+                this.bindEvents();
+                this.updateDisplay();
+            }
+
+            initElements() {
+                this.elements = {
+                    // Quaternion sliders
+                    qw: document.getElementById('qw'),
+                    qx: document.getElementById('qx'),
+                    qy: document.getElementById('qy'),
+                    qz: document.getElementById('qz'),
+                    
+                    // Value displays
+                    qwValue: document.getElementById('qw-value'),
+                    qxValue: document.getElementById('qx-value'),
+                    qyValue: document.getElementById('qy-value'),
+                    qzValue: document.getElementById('qz-value'),
+                    
+                    // 3D phone
+                    phone3d: document.getElementById('phone3d'),
+                    
+                    // 2D screen
+                    cursor: document.getElementById('cursor'),
+                    screenCoords: document.getElementById('screenCoords'),
+                    
+                    // Buttons
+                    resetBtn: document.getElementById('resetBtn'),
+                    animateBtn: document.getElementById('animateBtn'),
+                    
+                    // Info displays
+                    normW: document.getElementById('norm-w'),
+                    normX: document.getElementById('norm-x'),
+                    normY: document.getElementById('norm-y'),
+                    normZ: document.getElementById('norm-z'),
+                    eulerRoll: document.getElementById('euler-roll'),
+                    eulerPitch: document.getElementById('euler-pitch'),
+                    eulerYaw: document.getElementById('euler-yaw')
+                };
+            }
+
+            bindEvents() {
+                // Quaternion slider events
+                ['qw', 'qx', 'qy', 'qz'].forEach(param => {
+                    this.elements[param].addEventListener('input', (e) => {
+                        this.quaternion[param[1]] = parseFloat(e.target.value);
+                        this.updateDisplay();
+                    });
+                });
+
+                // Button events
+                this.elements.resetBtn.addEventListener('click', () => this.reset());
+                this.elements.animateBtn.addEventListener('click', () => this.toggleAnimation());
+            }
+
+            normalizeQuaternion(q) {
+                const magnitude = Math.sqrt(q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z);
+                if (magnitude === 0) return { w: 1, x: 0, y: 0, z: 0 };
+                return {
+                    w: q.w / magnitude,
+                    x: q.x / magnitude,
+                    y: q.y / magnitude,
+                    z: q.z / magnitude
+                };
+            }
+
+            quaternionToEuler(q) {
+                const normalized = this.normalizeQuaternion(q);
+                
+                // Roll (x-axis rotation)
+                const sinr_cosp = 2 * (normalized.w * normalized.x + normalized.y * normalized.z);
+                const cosr_cosp = 1 - 2 * (normalized.x * normalized.x + normalized.y * normalized.y);
+                const roll = Math.atan2(sinr_cosp, cosr_cosp);
+
+                // Pitch (y-axis rotation)
+                const sinp = 2 * (normalized.w * normalized.y - normalized.z * normalized.x);
+                const pitch = Math.abs(sinp) >= 1 ? Math.sign(sinp) * Math.PI / 2 : Math.asin(sinp);
+
+                // Yaw (z-axis rotation)
+                const siny_cosp = 2 * (normalized.w * normalized.z + normalized.x * normalized.y);
+                const cosy_cosp = 1 - 2 * (normalized.y * normalized.y + normalized.z * normalized.z);
+                const yaw = Math.atan2(siny_cosp, cosy_cosp);
+
+                return { roll, pitch, yaw };
+            }
+
+            mapToScreen(q) {
+                const euler = this.quaternionToEuler(q);
+                
+                // Map pitch to screen Y (up/down movement)
+                // Map yaw to screen X (left/right movement)
+                const screenX = Math.max(-200, Math.min(200, euler.yaw * 100));
+                const screenY = Math.max(-150, Math.min(150, -euler.pitch * 100)); // Negative for intuitive up/down
+                
+                return { x: screenX, y: screenY };
+            }
+
+            updateDisplay() {
+                const normalized = this.normalizeQuaternion(this.quaternion);
+                const euler = this.quaternionToEuler(this.quaternion);
+                this.screenPos = this.mapToScreen(this.quaternion);
+
+                // Update slider value displays
+                this.elements.qwValue.textContent = this.quaternion.w.toFixed(2);
+                this.elements.qxValue.textContent = this.quaternion.x.toFixed(2);
+                this.elements.qyValue.textContent = this.quaternion.y.toFixed(2);
+                this.elements.qzValue.textContent = this.quaternion.z.toFixed(2);
+
+                // Update 3D phone rotation
+                const rollDeg = euler.roll * 180 / Math.PI;
+                const pitchDeg = euler.pitch * 180 / Math.PI;
+                const yawDeg = euler.yaw * 180 / Math.PI;
+                
+                this.elements.phone3d.style.transform = `
+                    translate(-50%, -50%)
+                    perspective(400px)
+                    rotateX(${pitchDeg}deg)
+                    rotateY(${yawDeg}deg)
+                    rotateZ(${rollDeg}deg)
+                `;
+
+                // Update 2D cursor position
+                const screenContainer = this.elements.cursor.parentElement;
+                const containerRect = screenContainer.getBoundingClientRect();
+                const centerX = screenContainer.offsetWidth / 2;
+                const centerY = screenContainer.offsetHeight / 2;
+                
+                this.elements.cursor.style.left = `${centerX + this.screenPos.x}px`;
+                this.elements.cursor.style.top = `${centerY + this.screenPos.y}px`;
+
+                // Update coordinate display
+                this.elements.screenCoords.textContent = `X: ${Math.round(this.screenPos.x)}, Y: ${Math.round(this.screenPos.y)}`;
+
+                // Update info displays
+                this.elements.normW.textContent = normalized.w.toFixed(3);
+                this.elements.normX.textContent = normalized.x.toFixed(3);
+                this.elements.normY.textContent = normalized.y.toFixed(3);
+                this.elements.normZ.textContent = normalized.z.toFixed(3);
+                
+                this.elements.eulerRoll.textContent = euler.roll.toFixed(3);
+                this.elements.eulerPitch.textContent = euler.pitch.toFixed(3);
+                this.elements.eulerYaw.textContent = euler.yaw.toFixed(3);
+            }
+
+            reset() {
+                this.quaternion = { w: 1, x: 0, y: 0, z: 0 };
+                
+                // Update sliders
+                this.elements.qw.value = 1;
+                this.elements.qx.value = 0;
+                this.elements.qy.value = 0;
+                this.elements.qz.value = 0;
+                
+                this.updateDisplay();
+            }
+
+            toggleAnimation() {
+                if (this.isAnimating) {
+                    this.stopAnimation();
+                } else {
+                    this.startAnimation();
+                }
+            }
+
+            startAnimation() {
+                this.isAnimating = true;
+                this.elements.animateBtn.textContent = 'Stop Animation';
+                this.elements.animateBtn.classList.add('active');
+                
+                const startTime = Date.now();
+                
+                const animate = () => {
+                    if (!this.isAnimating) return;
+                    
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    const angle = elapsed * 0.5;
+                    
+                    // Create smooth rotation animation
+                    const w = Math.cos(angle / 2);
+                    const x = Math.sin(angle / 2) * 0.3;
+                    const y = Math.sin(angle / 2) * 0.7;
+                    const z = Math.sin(angle / 2) * 0.2;
+                    
+                    this.quaternion = { w, x, y, z };
+                    
+                    // Update sliders
+                    this.elements.qw.value = w;
+                    this.elements.qx.value = x;
+                    this.elements.qy.value = y;
+                    this.elements.qz.value = z;
+                    
+                    this.updateDisplay();
+                    
+                    this.animationId = requestAnimationFrame(animate);
+                };
+                
+                animate();
+            }
+
+            stopAnimation() {
+                this.isAnimating = false;
+                this.elements.animateBtn.textContent = 'Animate';
+                this.elements.animateBtn.classList.remove('active');
+                
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+            }
+        }
+
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new QuaternionMapper();
+        });
+    </script>
+</body>
+</html>
